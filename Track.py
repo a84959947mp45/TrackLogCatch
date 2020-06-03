@@ -38,7 +38,7 @@ def plot_photo_track(img_path):
 
 class ColorMaper:
     colors=['#9b59b6', '#3498db', '#1abc9c', '#f1c40f', '#e74c3c']
-    condition=[(0, 4), (4, 6), (6, 8), (8, 10), (10, 12)]
+    condition=[(0, 1), (1, 2), (2, 3), (3, 4)]
 
     @staticmethod
     def speed2color(speed):
@@ -68,7 +68,7 @@ def loadOnlineFiles(n):
 def plot_track(ax, track):
     FIELD_COLOR = "#ecf0f1"
     ROAD_COLOR = "#2c3e50"
-    CENTERLINE_COLOR = "#f1c40f"
+    CENTERLINE_COLOR = "#FFFFFF"
 
     waypoints = np.load(track)
 
@@ -134,14 +134,15 @@ def drawPlot(logfile,name):
                 list_y_total.append(y)
                 if len(list_x) >=2:
                     
-                    axs[roundCount//2,roundCount%2].plot(list_x, list_y,color='r', **transform['plot_args'] )
+                    axs[roundCount//2,roundCount%2].plot(list_x, list_y,color=ColorMaper.speed2color(speed), **transform['plot_args'] )
                     list_x = [list_x[-1]]
                     list_y = [list_y[-1]]
 
-                    axs[1,1].plot(list_x_total, list_y_total, color='r', **transform['plot_args'] )
+                    axs[1,1].plot(list_x_total, list_y_total,  color=ColorMaper.speed2color(speed), **transform['plot_args'] )
                     list_x_total = [list_x_total[-1]]
                     list_y_total = [list_y_total[-1]]
-          
+    
+    fig.legend(ColorMaper.custom_lines(), ColorMaper.legend_label(), loc='lower right', fontsize=15)
     plt.show()
 
 
