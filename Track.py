@@ -8,6 +8,15 @@ import math
 from matplotlib.lines import Line2D
 import os
 import subprocess
+import argparse
+
+#預設下載最新的,顯示一筆
+parser = argparse.ArgumentParser()
+parser.add_argument("-d","--download",type=bool, default=False, help="download track log")
+parser.add_argument("-v","--viewNumber", type=int, default=1, help="how many program show image")
+opt = parser.parse_args()
+print(opt)
+
 
 transform=dict()
 transform['Spain_track'] = dict(scale=1, offset_x=0, offset_y=0, plot_args=dict(linewidth=1, alpha=0.9), theta=0)
@@ -68,32 +77,54 @@ class ColorMaper:
 def loadOnlineFiles(n):
     subprocess.call(['./log.sh',str(n)])
 
-def drawPlot(npyfile,logfile,name):
+
+def plot_track(ax, track):
+    FIELD_COLOR = "#ecf0f1"
+    ROAD_COLOR = "#2c3e50"
+    CENTERLINE_COLOR = "#f1c40f"
+
+    waypoints = np.load(track)
+
+    ax.axis("equal")
+    ax.set_facecolor(FIELD_COLOR)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    for side in ["top", "bottom", "left", "right"]:
+        ax.spines[side].set_visible(False)
+
+    center_points, inner_points, outer_points = np.hsplit(waypoints, 3)
+
+    ax.fill(outer_points[:, 0], outer_points[:, 1], color=ROAD_COLOR)
+    ax.fill(inner_points[:, 0], inner_points[:, 1], color=FIELD_COLOR)
+    ax.plot(center_points[:, 0], center_points[:, 1], color=CENTERLINE_COLOR, linestyle="--")
+
+
+def drawPlot(logfile,name):
 
     list_x = []
     list_y = []
     list_x_total = []
     list_y_total = []
-    traning_waypoints = np.load(npyfile)
-  
-    
-    fig = plt.figure(figsize=(20, 20))
-    fig.canvas.mpl_connect('key_press_event', on_key)
-    fig.suptitle(name+" "+npyfile[0:-4], fontsize=16)
+    encode  = ['First Round','Second Round','Third Round','Total Round']
 
-
-    ax = fig.add_subplot(221)
-    ax.title.set_text('First Round')
-    ax2 = fig.add_subplot(222)
-    ax2.title.set_text('Second Round')
-    ax3 = fig.add_subplot(223)
-    ax3.title.set_text('Third Round')
-    ax4 = fig.add_subplot(224)
-    ax4.title.set_text('Total Round')
+   
+    fig, axs = plt.subplots(2, 2,figsize=(20, 20))
 
     with open(logfile, 'r', encoding='UTF-8') as file:
         for line in file:
             line = line.split(" ")
+            if  len(line)>4 and line[4].startswith("/WORLD_NAME:"):
+                npyFile = line[5][:-1]+".npy"
+
+                for i in range(4):
+                    plot_track(axs[i // 2, i % 2], npyFile)
+                    axs[i // 2, i % 2].title.set_text(encode[0]+'Round')
+                
+            
+                fig.canvas.mpl_connect('key_press_event', on_key)
+                fig.suptitle(name+"     "+line[5][:-1] , fontsize=16)
+
+                
             line=line[2]
             if  not line.startswith("SIM_TRACE_LOG"):
                 if len(list_x) > 1:
@@ -104,55 +135,22 @@ def drawPlot(npyfile,logfile,name):
             else:
                 line = line.split(',')
                 roundCount =  str(line[0])
-                roundCount=roundCount[-1:]
-                if(roundCount=="0"):
-                    ax.plot(traning_waypoints[:, 2],traning_waypoints[:, 3], linewidth=0.5, color='b')
-                    ax.plot(traning_waypoints[:, 4],traning_waypoints[:, 5],linewidth=0.5, color='b')
-                    x, y, speed = float(line[2]), float(line[3]), float(line[6])
-                    scale = transform[track]['scale']
-                    x, y = x * scale, y * scale
-                    x, y = rotate(x, y, 0, 0, transform[track]['theta'])
-                    x, y = shift(x, y, transform[track]['offset_x'], transform[track]['offset_y'])
-                    list_x.append(x)
-                    list_y.append(y)
-                    if len(list_x) >=2:
-                        
-                        ax.plot(list_x, list_y,color='r', **transform[track]['plot_args'] )
-                        list_x = [list_x[-1]]
-                        list_y = [list_y[-1]]
+                roundCount=int(roundCount[-1:])
+                x, y, speed = float(line[2]), float(line[3]), float(line[6])
+                scale = transform[track]['scale']
+                x, y = x * scale, y * scale
+                x, y = rotate(x, y, 0, 0, transform[track]['theta'])
+                x, y = shift(x, y, transform[track]['offset_x'], transform[track]['offset_y'])
+                list_x.append(x)
+                list_y.append(y)
+                if len(list_x) >=2:
+                    
+                    axs[roundCount//2,roundCount%2].plot(list_x, list_y,color='r', **transform[track]['plot_args'] )
+                    list_x = [list_x[-1]]
+                    list_y = [list_y[-1]]
+
                 
-                elif(roundCount=="1"):
-                    ax2.plot(traning_waypoints[:, 2],traning_waypoints[:, 3], linewidth=0.5, color='b')
-                    ax2.plot(traning_waypoints[:, 4],traning_waypoints[:, 5], linewidth=0.5, color='b')
-                    x, y, speed = float(line[2]), float(line[3]), float(line[6])
-                    scale = transform[track]['scale']
-                    x, y = x * scale, y * scale
-                    x, y = rotate(x, y, 0, 0, transform[track]['theta'])
-                    x, y = shift(x, y, transform[track]['offset_x'], transform[track]['offset_y'])
-                    list_x.append(x)
-                    list_y.append(y)
-                    if len(list_x) >=2:
-                        
-                        ax2.plot(list_x, list_y, color='r', **transform[track]['plot_args'] )
-                        list_x = [list_x[-1]]
-                        list_y = [list_y[-1]]
-                elif(roundCount=="2"):
-                    ax3.plot(traning_waypoints[:, 2],traning_waypoints[:, 3], linewidth=0.5, color='b')
-                    ax3.plot(traning_waypoints[:, 4],traning_waypoints[:, 5], linewidth=0.5, color='b')
-                    x, y, speed = float(line[2]), float(line[3]), float(line[6])
-                    scale = transform[track]['scale']
-                    x, y = x * scale, y * scale
-                    x, y = rotate(x, y, 0, 0, transform[track]['theta'])
-                    x, y = shift(x, y, transform[track]['offset_x'], transform[track]['offset_y'])
-                    list_x.append(x)
-                    list_y.append(y)
-                    if len(list_x) >=2:
-                        
-                        ax3.plot(list_x, list_y, color='r', **transform[track]['plot_args'] )
-                        list_x = [list_x[-1]]
-                        list_y = [list_y[-1]]
-                ax4.plot(traning_waypoints[:, 2],traning_waypoints[:, 3], linewidth=0.5, color='b')
-                ax4.plot(traning_waypoints[:, 4],traning_waypoints[:, 5], linewidth=0.5, color='b')
+
                 x, y, speed = float(line[2]), float(line[3]), float(line[6])
                 scale = transform[track]['scale']
                 x, y = x * scale, y * scale
@@ -162,7 +160,7 @@ def drawPlot(npyfile,logfile,name):
                 list_y_total.append(y)
                 if len(list_x_total) >=2:
                     
-                    ax4.plot(list_x_total, list_y_total, color='r', **transform[track]['plot_args'] )
+                    axs[1,1].plot(list_x_total, list_y_total, color='r', **transform[track]['plot_args'] )
                     list_x_total = [list_x_total[-1]]
                     list_y_total = [list_y_total[-1]]
           
@@ -171,19 +169,16 @@ def drawPlot(npyfile,logfile,name):
 
 
 def main():
-#  loadOnlineFiles()
-    npyfile=sys.argv[1]
-    produce =sys.argv[2]
-    n =sys.argv[3]
 
-    if produce == "True":
-        if int(n)>0:
-            loadOnlineFiles(n)
+    
+    if opt.download:
+        if opt.viewNumber>0:
+            loadOnlineFiles(opt.viewNumber)
     
     path="./deepracer_log"
     count=0
     for layer1 in os.listdir(path):
-        if count>=int(n):
+        if count>=int(opt.viewNumber):
             break
         file_path = os.path.join(path,layer1) 
         count+=1
@@ -192,9 +187,9 @@ def main():
             for layer3 in os.listdir(file_path2):
                 if os.path.splitext(layer3)[1]=='.txt': 
                     file_path3 = os.path.join(file_path2,layer3)
-                    drawPlot(npyfile,file_path3,layer1)
+                    drawPlot(file_path3,layer1)
 
-
+    
 if __name__ == "__main__":
     main()
 
