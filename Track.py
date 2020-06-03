@@ -37,7 +37,7 @@ def plot_photo_track(img_path):
     ax.imshow(img)
 
 class ColorMaper:
-    colors=['#9b59b6', '#3498db', '#1abc9c', '#f1c40f', '#e74c3c']
+    colors=['#9b59b6', '#93FF93', '#f1c40f', '#FF0000', '#e74c3c']
     condition=[(0, 1), (1, 2), (2, 3), (3, 4)]
 
     @staticmethod
