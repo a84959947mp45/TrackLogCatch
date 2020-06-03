@@ -18,10 +18,8 @@ opt = parser.parse_args()
 print(opt)
 
 
-transform=dict()
-transform['Spain_track'] = dict(scale=1, offset_x=0, offset_y=0, plot_args=dict(linewidth=1, alpha=0.9), theta=0)
+transform = dict(scale=1, offset_x=0, offset_y=0, plot_args=dict(linewidth=1, alpha=0.9), theta=0)
 
-track='Spain_track'
 
 def rotate(x, y, xo, yo, theta):  # rotate x,y around xo,yo by theta (rad)
     theta = theta * math.pi / 180
@@ -33,21 +31,10 @@ def rotate(x, y, xo, yo, theta):  # rotate x,y around xo,yo by theta (rad)
 def shift(x, y, dx, dy):
     return x+dx, y+dy
 
-
 def plot_photo_track(img_path):
     img = plt.imread(img_path)
     ax = plt.gca()
     ax.imshow(img)
-
-
-def on_key(event):
-    if event.key == 'q':
-        exit()
-
-def get_waypoints(track_name):
-    p = Path(
-        '/home/chuyj/CGI_DeepRacer/env/simulation_ws/src/deepracer_simulation_environment/routes/')
-    return np.load((p / track_name).with_suffix('.npy'))
 
 class ColorMaper:
     colors=['#9b59b6', '#3498db', '#1abc9c', '#f1c40f', '#e74c3c']
@@ -113,22 +100,22 @@ def drawPlot(logfile,name):
     with open(logfile, 'r', encoding='UTF-8') as file:
         for line in file:
             line = line.split(" ")
+
+            #creat and setting figure
             if  len(line)>4 and line[4].startswith("/WORLD_NAME:"):
                 npyFile = line[5][:-1]+".npy"
 
                 for i in range(4):
                     plot_track(axs[i // 2, i % 2], npyFile)
-                    axs[i // 2, i % 2].title.set_text(encode[0]+'Round')
+                    axs[i // 2, i % 2].title.set_text(encode[i]+'Round')
                 
-            
-                fig.canvas.mpl_connect('key_press_event', on_key)
                 fig.suptitle(name+"     "+line[5][:-1] , fontsize=16)
 
-                
+            #
             line=line[2]
             if  not line.startswith("SIM_TRACE_LOG"):
                 if len(list_x) > 1:
-                    plot_args = transform[track]['plot_args']
+                    plot_args = transform['plot_args']
                     plt.plot(list_x, list_y, **plot_args)
                 list_x = []
                 list_y = []
@@ -137,30 +124,21 @@ def drawPlot(logfile,name):
                 roundCount =  str(line[0])
                 roundCount=int(roundCount[-1:])
                 x, y, speed = float(line[2]), float(line[3]), float(line[6])
-                scale = transform[track]['scale']
+                scale = transform['scale']
                 x, y = x * scale, y * scale
-                x, y = rotate(x, y, 0, 0, transform[track]['theta'])
-                x, y = shift(x, y, transform[track]['offset_x'], transform[track]['offset_y'])
+                x, y = rotate(x, y, 0, 0, transform['theta'])
+                x, y = shift(x, y, transform['offset_x'], transform['offset_y'])
                 list_x.append(x)
                 list_y.append(y)
+                list_x_total.append(x)
+                list_y_total.append(y)
                 if len(list_x) >=2:
                     
-                    axs[roundCount//2,roundCount%2].plot(list_x, list_y,color='r', **transform[track]['plot_args'] )
+                    axs[roundCount//2,roundCount%2].plot(list_x, list_y,color='r', **transform['plot_args'] )
                     list_x = [list_x[-1]]
                     list_y = [list_y[-1]]
 
-                
-
-                x, y, speed = float(line[2]), float(line[3]), float(line[6])
-                scale = transform[track]['scale']
-                x, y = x * scale, y * scale
-                x, y = rotate(x, y, 0, 0, transform[track]['theta'])
-                x, y = shift(x, y, transform[track]['offset_x'], transform[track]['offset_y'])
-                list_x_total.append(x)
-                list_y_total.append(y)
-                if len(list_x_total) >=2:
-                    
-                    axs[1,1].plot(list_x_total, list_y_total, color='r', **transform[track]['plot_args'] )
+                    axs[1,1].plot(list_x_total, list_y_total, color='r', **transform['plot_args'] )
                     list_x_total = [list_x_total[-1]]
                     list_y_total = [list_y_total[-1]]
           
@@ -189,7 +167,6 @@ def main():
                     file_path3 = os.path.join(file_path2,layer3)
                     drawPlot(file_path3,layer1)
 
-    
 if __name__ == "__main__":
     main()
 
