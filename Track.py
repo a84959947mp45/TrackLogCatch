@@ -171,7 +171,9 @@ def drawPlot(logfile,name):
     
     fig.legend(ColorMaper.custom_lines(), ColorMaper.legend_label(), loc='lower right', fontsize=15)
     fig.suptitle(title+" time:  "+ str(sumTime), fontsize=16)
+    plt.savefig(name+".png")
     plt.show()
+    
     
 
 
