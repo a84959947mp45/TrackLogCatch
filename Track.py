@@ -9,10 +9,11 @@ from matplotlib.lines import Line2D
 import os
 import subprocess
 import argparse
+from datetime import datetime
 
 #預設下載最新的,顯示一筆
 parser = argparse.ArgumentParser()
-parser.add_argument("-d","--download",type=bool, default=False, help="download track log")
+parser.add_argument("-u","--update",type=bool, default=False, help="download track log")
 parser.add_argument("-v","--viewNumber", type=int, default=1, help="how many program show image")
 opt = parser.parse_args()
 print(opt)
@@ -94,9 +95,17 @@ def drawPlot(logfile,name):
     list_y_total = []
     encode  = ['First Round','Second Round','Third Round','Total Round']
 
-   
-    fig, axs = plt.subplots(2, 2,figsize=(20, 20))
+    last = ""
+    now  = ""
+    lastTime = 0
+    nowTime  = 0
+    sumTime = datetime.strptime("0:0:0.0", "%H:%M:%S.%f")-datetime.strptime("0:0:0.0", "%H:%M:%S.%f")
 
+    fig, axs = plt.subplots(2, 2,figsize=(20, 20))
+    
+    time = []
+    first =True
+    title =""
     with open(logfile, 'r', encoding='UTF-8') as file:
         for line in file:
             line = line.split(" ")
@@ -109,9 +118,10 @@ def drawPlot(logfile,name):
                     plot_track(axs[i // 2, i % 2], npyFile)
                     axs[i // 2, i % 2].title.set_text(encode[i]+'Round')
                 
-                fig.suptitle(name+"     "+line[5][:-1] , fontsize=16)
+                title =name+"     "+line[5][:-1]
+                
 
-            #
+            nowTime = datetime.strptime(line[1][0:8], "%H:%M:%S") 
             line=line[2]
             if  not line.startswith("SIM_TRACE_LOG"):
                 if len(list_x) > 1:
@@ -123,7 +133,24 @@ def drawPlot(logfile,name):
                 line = line.split(',')
                 roundCount =  str(line[0])
                 roundCount=int(roundCount[-1:])
-                x, y, speed = float(line[2]), float(line[3]), float(line[6])
+                x, y, speed ,now = float(line[2]), float(line[3]), float(line[6]), line[-1][:-1]
+
+                '''
+                if(first):
+                    time.append(line[-2])
+                    first =False
+                if(now == "lap_complete"):
+                    time.append(line[-2])
+                '''
+                
+                if last =="" or last == "off_track"  or last == "lap_complete" or last == "reversed":
+                    last  = now
+                    lastTime =nowTime
+                else:
+                    sumTime+=(nowTime-lastTime)
+                    lastTime = nowTime
+                    last =now
+                
                 scale = transform['scale']
                 x, y = x * scale, y * scale
                 x, y = rotate(x, y, 0, 0, transform['theta'])
@@ -143,30 +170,45 @@ def drawPlot(logfile,name):
                     list_y_total = [list_y_total[-1]]
     
     fig.legend(ColorMaper.custom_lines(), ColorMaper.legend_label(), loc='lower right', fontsize=15)
+    fig.suptitle(title+" time:  "+ str(sumTime), fontsize=16)
     plt.show()
+    
 
 
 
 def main():
 
-    
-    if opt.download:
+    path="./deepracer_log"
+
+    if opt.update:
         if opt.viewNumber>0:
             loadOnlineFiles(opt.viewNumber)
     
-    path="./deepracer_log"
-    count=0
+    try:
+        if len(os.listdir(path)) < opt.viewNumber:
+            loadOnlineFiles(opt.viewNumber)
+    except:
+        loadOnlineFiles(opt.viewNumber)
+
+   
+    list_name = []
+    #sort data
     for layer1 in os.listdir(path):
-        if count>=int(opt.viewNumber):
-            break
         file_path = os.path.join(path,layer1) 
-        count+=1
         for layer2 in os.listdir(file_path):
             file_path2 = os.path.join(file_path,layer2)
-            for layer3 in os.listdir(file_path2):
-                if os.path.splitext(layer3)[1]=='.txt': 
-                    file_path3 = os.path.join(file_path2,layer3)
-                    drawPlot(file_path3,layer1)
+            list_name.append(file_path2)
+    
+    list_name.sort(reverse=True,key=lambda date: datetime.strptime(date[33:52], "%Y-%m-%dT%H-%M-%S"))
+    
+    #draw image
+    for i in range(len(list_name)):
+        if i>=int(opt.viewNumber):
+            break      
+        for layer3 in os.listdir(list_name[i]):
+            if os.path.splitext(layer3)[1]=='.txt': 
+                file_path3 = os.path.join(list_name[i],layer3)
+                drawPlot(file_path3,file_path3[16:32])
 
 if __name__ == "__main__":
     main()
