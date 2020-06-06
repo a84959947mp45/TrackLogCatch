@@ -38,13 +38,13 @@ def plot_photo_track(img_path):
     ax.imshow(img)
 
 class ColorMaper:
-    colors=['#9b59b6', '#93FF93', '#f1c40f', '#FF0000', '#e74c3c']
-    condition=[(0, 1), (1, 2), (2, 3), (3, 4)]
+    colors=["#1e90ff", "#2ed573", "#ff4757"]
+    condition=[ 1.33, 2.67, 4]
 
     @staticmethod
     def speed2color(speed):
         for i, cond in enumerate(ColorMaper.condition):
-            if speed > cond[0] and speed <= cond[1]:
+            if speed == cond:
                 return ColorMaper.colors[i] 
 
 
@@ -59,7 +59,7 @@ class ColorMaper:
     def legend_label():
         labels = []
         for cond in ColorMaper.condition:
-            labels.append(f'{cond[0]} < speed <= {cond[1]}')
+            labels.append(f' speed = {cond}')
         return labels
 
 def loadOnlineFiles(n):
@@ -69,7 +69,7 @@ def loadOnlineFiles(n):
 def plot_track(ax, track):
     FIELD_COLOR = "#ecf0f1"
     ROAD_COLOR = "#2c3e50"
-    CENTERLINE_COLOR = "#FFFFFF"
+    CENTERLINE_COLOR = "#f1c40f"
 
     waypoints = np.load(track)
 
